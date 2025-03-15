@@ -45,7 +45,7 @@ export default function RootLayout({
 
           <figure role="separator" className="basis-8" />
 
-          <div className="bg-secondary/20 border border-secondary/40 flex items-center px-3 py-2 gap-x-1 rounded-lg">
+          <div className="bg-secondary/10 border border-secondary/20 flex items-center px-3 py-2 gap-x-1 rounded-lg">
             <Icon name="search" className="text-lg" strokeWidth={2} />
             <span className="text-sm text-foreground/50 tracking-wider font-extralight">
               Search
@@ -61,7 +61,7 @@ export default function RootLayout({
 
           <figure role="separator" className="flex-1" />
 
-          <button className="bg-secondary/10 px-2 py-1 rounded border border-secondary/20 text-secondary">
+          <button className="bg-secondary/10 px-2 py-1 rounded-lg border border-secondary/20 text-secondary">
             Get Started
           </button>
         </nav>

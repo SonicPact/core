@@ -1,5 +1,3 @@
-import Image from "next/image";
-
 export default function Home() {
   return (
     <div>
@@ -7,7 +5,7 @@ export default function Home() {
         <figure
           className="bg-[url(/logo-bg.png)] absolute inset-0 animate-bg-infinite-scroll"
           style={{
-            backgroundSize: "124px"
+            backgroundSize: "124px",
           }}
         >
           <figure className="absolute inset-0 bg-radial from-transparent to-70% to-background" />
