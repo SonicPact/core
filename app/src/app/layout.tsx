@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import Icon from "@/shared/components/Icon";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,6 +28,44 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <nav className="fixed bg-card/70 z-50 backdrop-blur-lg py-2 p-page w-full flex items-center">
+          <div className="flex text-3xl items-center gap-x-2">
+            <img
+              src="/logo.png"
+              alt="logo"
+              className="size-[1.5em] object-contain"
+            />
+            <h1 className="font-bold uppercase tracking-[-0.1em]">
+              Sonic
+              <span className="bg-gradient-to-br from-primary to-secondary text-transparent bg-clip-text">
+                _Pact
+              </span>
+            </h1>
+          </div>
+
+          <figure role="separator" className="basis-8" />
+
+          <div className="bg-secondary/20 border border-secondary/40 flex items-center px-3 py-2 gap-x-1 rounded-lg">
+            <Icon name="search" className="text-lg" strokeWidth={2} />
+            <span className="text-sm text-foreground/50 tracking-wider font-extralight">
+              Search
+            </span>
+
+            <figure role="separator" className="w-16" />
+
+            <button className="bg-background px-2 py-1 flex gap-x-1 items-center text-sm rounded shadow-[inset_-0.2px_0.7px_4px_var(--secondary)]">
+              <Icon name="command" />
+              <span className="text-foreground/80 text-xs">K</span>
+            </button>
+          </div>
+
+          <figure role="separator" className="flex-1" />
+
+          <button className="bg-secondary/10 px-2 py-1 rounded border border-secondary/20 text-secondary">
+            Get Started
+          </button>
+        </nav>
+
         {children}
       </body>
     </html>
