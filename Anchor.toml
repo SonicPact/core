@@ -3,9 +3,16 @@ package_manager = "yarn"
 
 [features]
 resolution = true
+seeds = true
 skip-lint = false
 
 [programs.localnet]
+sonicpact = "GrujK4NkA76V7BvkS66t1gAPXJKJgmF6dXoRGiq7CeoM"
+
+[programs.devnet]
+sonicpact = "GrujK4NkA76V7BvkS66t1gAPXJKJgmF6dXoRGiq7CeoM"
+
+[programs.mainnet]
 sonicpact = "GrujK4NkA76V7BvkS66t1gAPXJKJgmF6dXoRGiq7CeoM"
 
 [registry]
