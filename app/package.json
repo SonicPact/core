@@ -1,21 +1,26 @@
 {
-  "name": "app",
+  "name": "sonicpact",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "typegen:db": "cd supabase && supabase gen types typescript --project-id miijjpygwmedrzwqbfow > ../src/database.generated.ts",
+    "db:pull": "cd supabase && supabase link --project-ref miijjpygwmedrzwqbfow && supabase db pull",
+    "db:push": "cd supabase && supabase link --project-ref miijjpygwmedrzwqbfow && supabase db push --include-all"
   },
   "dependencies": {
     "@solana/wallet-adapter-react-ui": "^0.9.35",
     "@solana/wallet-adapter-wallets": "^0.19.32",
+    "@supabase/supabase-js": "^2.49.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.482.0",
     "next": "15.2.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "supabase": "^2.19.7",
     "tailwind-merge": "^3.0.2"
   },
   "devDependencies": {
@@ -30,6 +35,16 @@
     "@eslint/eslintrc": "^3"
   },
   "trustedDependencies": [
-    "@solana/wallet-adapter-wallets"
+    "@solana/wallet-adapter-wallets",
+    "supabase",
+    "sharp",
+    "bigint-buffer",
+    "bufferutil",
+    "utf-8-validate",
+    "keccak",
+    "protobufjs",
+    "usb",
+    "blake-hash",
+    "tiny-secp256k1"
   ]
 }
