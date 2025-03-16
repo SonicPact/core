@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { checkUserExists } from "./user";
+import { userService } from "@/services/userService";
 
 // Session duration in seconds (1 day)
 const SESSION_DURATION = 60 * 60 * 24;
@@ -27,7 +27,8 @@ export async function verifyWalletSignature(
     }
 
     // Check if user exists
-    const { exists, userData } = await checkUserExists(walletAddress);
+    const userData = await userService.getUserByWalletAddress(walletAddress);
+    const exists = !!userData;
 
     // Set a session cookie
     const cookieStore = await cookies();
