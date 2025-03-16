@@ -4,7 +4,9 @@
   --background: #01010a;
   --foreground: #ffffff;
   --primary: #14f195;
+  --primary-foreground: #010101;
   --secondary: #64a8f2;
+  --secondary-foreground: #010101;
   --border: oklch(0.3 0 0);
   --card: #101019;
 }
@@ -13,7 +15,9 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
   --color-border: var(--border);
   --color-card: var(--card);
   --font-sans: var(--font-geist-sans);
@@ -42,6 +46,10 @@ body {
 
 @utility size-em {
   @apply size-[1em];
+}
+
+@utility z-1{
+  @apply z-[1];
 }
 
 @theme {

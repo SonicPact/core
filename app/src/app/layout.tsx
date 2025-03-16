@@ -28,7 +28,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <nav className="fixed bg-card/70 z-50 backdrop-blur-lg py-2 p-page w-full flex items-center">
+        <nav className="fixed bg-background/70 z-50 backdrop-blur-lg py-3 p-page w-full flex items-center">
           <div className="flex text-3xl items-center gap-x-2">
             <img
               src="/logo.png"
