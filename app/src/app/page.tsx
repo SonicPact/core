@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <div>
@@ -10,7 +12,7 @@ export default function Home() {
         >
           <figure className="absolute inset-0 bg-radial from-transparent to-65% to-background" />
 
-          <figure className="absolute bottom-0 left-0 w-full bg-background h-10 translate-y-1/2 blur-lg" /> 
+          <figure className="absolute bottom-0 left-0 w-full bg-background h-10 translate-y-1/2 blur-lg" />
         </figure>
 
         <div className="relative z-1 w-full h-full flex justify-center items-center flex-col drop-shadow-lg gap-y-5">
@@ -27,8 +29,24 @@ export default function Home() {
           </h3>
 
           <div className="flex gap-x-5">
-            <button className="w-52 py-2 rounded-lg bg-primary text-primary-foreground font-medium tracking-wider">Explore Celebs</button>
-            <button className="w-52 py-2 rounded-lg bg-background border border-primary shadow-[inset_-0.5px_1px_6px_var(--primary)]">Join as a Celeb</button> 
+            <Link
+              href="/onboarding?type=studio"
+              className="w-52 py-2 rounded-lg bg-primary text-primary-foreground font-medium tracking-wider text-center"
+            >
+              Join as a Studio
+            </Link>
+            <Link
+              href="/onboarding?type=celebrity"
+              className="w-52 py-2 rounded-lg bg-background border border-primary shadow-[inset_-0.5px_1px_6px_var(--primary)] text-center"
+            >
+              Join as a Celeb
+            </Link>
+          </div>
+
+          <div className="mt-4">
+            <Link href="/explore" className="text-primary underline">
+              Explore Celebrities
+            </Link>
           </div>
         </div>
       </section>
