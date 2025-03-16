@@ -4,6 +4,8 @@ import { useState, useEffect, FormEvent, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Icon from "@/shared/components/Icon";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 
 interface Celebrity {
   id: string;
@@ -16,6 +18,7 @@ function CreateDeal() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedCelebId = searchParams.get("celebrity");
+  const { connected } = useWallet();
 
   const [step, setStep] = useState(1);
   const [selectedCelebrity, setSelectedCelebrity] = useState<Celebrity | null>(
@@ -36,8 +39,22 @@ function CreateDeal() {
     additionalTerms: "",
   });
 
+  // Check if wallet is connected
+  useEffect(() => {
+    if (!connected) {
+      // Redirect to home after a short delay
+      const timeout = setTimeout(() => {
+        router.push("/");
+      }, 3000);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [connected, router]);
+
   // Fetch celebrities data
   useEffect(() => {
+    if (!connected) return;
+
     const fetchCelebrities = async () => {
       setIsLoading(true);
 
@@ -86,7 +103,7 @@ function CreateDeal() {
     };
 
     fetchCelebrities();
-  }, [preselectedCelebId]);
+  }, [preselectedCelebId, connected]);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -399,85 +416,103 @@ function CreateDeal() {
   return (
     <div className="min-h-screen pt-20 p-page">
       <div className="max-w-3xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Create a New Deal</h1>
-          <p className="text-foreground/70">
-            Set up a collaboration deal with a celebrity for your gaming NFTs.
-          </p>
-        </div>
-
-        <div className="flex items-center mb-8">
-          <div
-            className={`flex items-center justify-center w-8 h-8 rounded-full ${
-              step >= 1 ? "bg-primary" : "bg-secondary/20"
-            }`}
-          >
-            <span className="text-sm font-medium">1</span>
+        {!connected ? (
+          <div className="bg-background border border-secondary/20 rounded-lg p-6 shadow-lg text-center">
+            <h2 className="text-2xl font-bold mb-4">Wallet Not Connected</h2>
+            <p className="mb-6">
+              You need to connect your wallet to create a deal.
+            </p>
+            <div className="flex justify-center mb-4">
+              <WalletMultiButton className="wallet-adapter-button-custom" />
+            </div>
+            <p className="text-sm text-foreground/70">
+              You will be redirected to the home page in a few seconds...
+            </p>
           </div>
-          <div
-            className={`flex-1 h-1 mx-2 ${
-              step >= 2 ? "bg-primary" : "bg-secondary/20"
-            }`}
-          ></div>
-          <div
-            className={`flex items-center justify-center w-8 h-8 rounded-full ${
-              step >= 2 ? "bg-primary" : "bg-secondary/20"
-            }`}
-          >
-            <span className="text-sm font-medium">2</span>
-          </div>
-          <div
-            className={`flex-1 h-1 mx-2 ${
-              step >= 3 ? "bg-primary" : "bg-secondary/20"
-            }`}
-          ></div>
-          <div
-            className={`flex items-center justify-center w-8 h-8 rounded-full ${
-              step >= 3 ? "bg-primary" : "bg-secondary/20"
-            }`}
-          >
-            <span className="text-sm font-medium">3</span>
-          </div>
-        </div>
+        ) : (
+          <>
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold mb-2">Create a New Deal</h1>
+              <p className="text-foreground/70">
+                Set up a collaboration deal with a celebrity for your gaming
+                NFTs.
+              </p>
+            </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="bg-background border border-secondary/20 rounded-lg p-6 shadow-lg"
-        >
-          {step === 1 && renderStepOne()}
-          {step === 2 && renderStepTwo()}
-          {step === 3 && renderStepThree()}
-
-          <div className="flex justify-between mt-8">
-            {step > 1 ? (
-              <button
-                type="button"
-                onClick={() => setStep(step - 1)}
-                className="px-4 py-2 border border-secondary/20 rounded-lg"
+            <div className="flex items-center mb-8">
+              <div
+                className={`flex items-center justify-center w-8 h-8 rounded-full ${
+                  step >= 1 ? "bg-primary" : "bg-secondary/20"
+                }`}
               >
-                Back
-              </button>
-            ) : (
-              <Link
-                href="/dashboard"
-                className="px-4 py-2 border border-secondary/20 rounded-lg"
+                <span className="text-sm font-medium">1</span>
+              </div>
+              <div
+                className={`flex-1 h-1 mx-2 ${
+                  step >= 2 ? "bg-primary" : "bg-secondary/20"
+                }`}
+              ></div>
+              <div
+                className={`flex items-center justify-center w-8 h-8 rounded-full ${
+                  step >= 2 ? "bg-primary" : "bg-secondary/20"
+                }`}
               >
-                Cancel
-              </Link>
-            )}
+                <span className="text-sm font-medium">2</span>
+              </div>
+              <div
+                className={`flex-1 h-1 mx-2 ${
+                  step >= 3 ? "bg-primary" : "bg-secondary/20"
+                }`}
+              ></div>
+              <div
+                className={`flex items-center justify-center w-8 h-8 rounded-full ${
+                  step >= 3 ? "bg-primary" : "bg-secondary/20"
+                }`}
+              >
+                <span className="text-sm font-medium">3</span>
+              </div>
+            </div>
 
-            <button
-              type="submit"
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg"
-              disabled={
-                (step === 1 && !selectedCelebrity) ||
-                (step === 2 && (!dealData.name || !dealData.description))
-              }
+            <form
+              onSubmit={handleSubmit}
+              className="bg-background border border-secondary/20 rounded-lg p-6 shadow-lg"
             >
-              {step < 3 ? "Next" : "Create Deal"}
-            </button>
-          </div>
-        </form>
+              {step === 1 && renderStepOne()}
+              {step === 2 && renderStepTwo()}
+              {step === 3 && renderStepThree()}
+
+              <div className="flex justify-between mt-8">
+                {step > 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => setStep(step - 1)}
+                    className="px-4 py-2 border border-secondary/20 rounded-lg"
+                  >
+                    Back
+                  </button>
+                ) : (
+                  <Link
+                    href="/dashboard"
+                    className="px-4 py-2 border border-secondary/20 rounded-lg"
+                  >
+                    Cancel
+                  </Link>
+                )}
+
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg"
+                  disabled={
+                    (step === 1 && !selectedCelebrity) ||
+                    (step === 2 && (!dealData.name || !dealData.description))
+                  }
+                >
+                  {step < 3 ? "Next" : "Create Deal"}
+                </button>
+              </div>
+            </form>
+          </>
+        )}
       </div>
     </div>
   );
