@@ -1,0 +1,63 @@
+{
+  "name": "SonicPact: Streaming Exclusivity Deal",
+  "symbol": "SONIC",
+  "description": "This NFT commemorates the successful collaboration between Streaming Studios Inc and Content Creator X for \"Streaming Exclusivity Deal\". Exclusive streaming rights for the celebrity's content",
+  "image": "https://sonicpact.io/generated-nft-images/sample-deal-id-456.png",
+  "external_url": "https://sonicpact.io/deals/sample-deal-id-456",
+  "attributes": [
+    {
+      "trait_type": "Status",
+      "value": "Completed"
+    },
+    {
+      "trait_type": "Deal Amount",
+      "value": "25 SOL"
+    },
+    {
+      "trait_type": "Studio",
+      "value": "Streaming Studios Inc"
+    },
+    {
+      "trait_type": "Celebrity",
+      "value": "Content Creator X"
+    },
+    {
+      "trait_type": "Completion Date",
+      "value": "3/17/2025"
+    },
+    {
+      "trait_type": "Duration",
+      "value": "180 days"
+    },
+    {
+      "trait_type": "Usage Rights",
+      "value": "Limited"
+    },
+    {
+      "trait_type": "Exclusivity",
+      "value": "Yes"
+    },
+    {
+      "trait_type": "Royalty",
+      "value": "10%"
+    }
+  ],
+  "properties": {
+    "files": [
+      {
+        "uri": "https://sonicpact.io/generated-nft-images/sample-deal-id-456.png",
+        "type": "image/png"
+      }
+    ],
+    "creators": [
+      {
+        "address": "BrW7qv2qBhZ5fQNgUL39ZXVsXEYEj8tFKL1L87VaNu1w",
+        "share": 50
+      },
+      {
+        "address": "CMQXoTQbk1HKKsAPdR7dtmxUpKXpnX9sFKdj1YLHvVRZ",
+        "share": 50
+      }
+    ]
+  }
+}

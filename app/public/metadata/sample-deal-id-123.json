@@ -1,0 +1,63 @@
+{
+  "name": "SonicPact: Game Character Endorsement",
+  "symbol": "SONIC",
+  "description": "This NFT commemorates the successful collaboration between Awesome Studios and Famous Person for \"Game Character Endorsement\". Celebrity endorsement and voice acting for game character",
+  "image": "https://sonicpact.io/generated-nft-images/sample-deal-id-123.png",
+  "external_url": "https://sonicpact.io/deals/sample-deal-id-123",
+  "attributes": [
+    {
+      "trait_type": "Status",
+      "value": "Completed"
+    },
+    {
+      "trait_type": "Deal Amount",
+      "value": "10 SOL"
+    },
+    {
+      "trait_type": "Studio",
+      "value": "Awesome Studios"
+    },
+    {
+      "trait_type": "Celebrity",
+      "value": "Famous Person"
+    },
+    {
+      "trait_type": "Completion Date",
+      "value": "3/17/2025"
+    },
+    {
+      "trait_type": "Duration",
+      "value": "365 days"
+    },
+    {
+      "trait_type": "Usage Rights",
+      "value": "Full"
+    },
+    {
+      "trait_type": "Exclusivity",
+      "value": "Yes"
+    },
+    {
+      "trait_type": "Royalty",
+      "value": "5%"
+    }
+  ],
+  "properties": {
+    "files": [
+      {
+        "uri": "https://sonicpact.io/generated-nft-images/sample-deal-id-123.png",
+        "type": "image/png"
+      }
+    ],
+    "creators": [
+      {
+        "address": "HN7cABqLq7wKj9VtQXdCiTVB6X4CQYn1zRbER7yHvjwQ",
+        "share": 50
+      },
+      {
+        "address": "J8oPcJwZqWntVQZCJZ5RJbAm1TutCLzirQD9pFUvir3S",
+        "share": 50
+      }
+    ]
+  }
+}

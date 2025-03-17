@@ -108,6 +108,93 @@ export type Database = {
         }
         Relationships: []
       }
+      deals: {
+        Row: {
+          additional_terms: string | null
+          celebrity_id: string
+          completed_at: string | null
+          created_at: string | null
+          description: string | null
+          duration_days: number | null
+          exclusivity: boolean | null
+          funded_amount: number | null
+          id: string
+          name: string
+          nft_image_url: string | null
+          nft_metadata_uri: string | null
+          nft_mint_address: string | null
+          onchain_id: number | null
+          payment_amount: number
+          platform_authority: string | null
+          royalty_percentage: number | null
+          status: string
+          studio_id: string
+          updated_at: string | null
+          usage_rights: string | null
+        }
+        Insert: {
+          additional_terms?: string | null
+          celebrity_id: string
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration_days?: number | null
+          exclusivity?: boolean | null
+          funded_amount?: number | null
+          id?: string
+          name: string
+          nft_image_url?: string | null
+          nft_metadata_uri?: string | null
+          nft_mint_address?: string | null
+          onchain_id?: number | null
+          payment_amount: number
+          platform_authority?: string | null
+          royalty_percentage?: number | null
+          status: string
+          studio_id: string
+          updated_at?: string | null
+          usage_rights?: string | null
+        }
+        Update: {
+          additional_terms?: string | null
+          celebrity_id?: string
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration_days?: number | null
+          exclusivity?: boolean | null
+          funded_amount?: number | null
+          id?: string
+          name?: string
+          nft_image_url?: string | null
+          nft_metadata_uri?: string | null
+          nft_mint_address?: string | null
+          onchain_id?: number | null
+          payment_amount?: number
+          platform_authority?: string | null
+          royalty_percentage?: number | null
+          status?: string
+          studio_id?: string
+          updated_at?: string | null
+          usage_rights?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deals_celebrity_id_fkey"
+            columns: ["celebrity_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_studio_id_fkey"
+            columns: ["studio_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           chat_id: string
@@ -146,6 +233,50 @@ export type Database = {
             columns: ["sender_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nft_certificates: {
+        Row: {
+          created_at: string
+          deal_id: string
+          description: string | null
+          id: string
+          image_url: string | null
+          metadata_uri: string
+          mint_address: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deal_id: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          metadata_uri: string
+          mint_address: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deal_id?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          metadata_uri?: string
+          mint_address?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nft_certificates_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
             referencedColumns: ["id"]
           },
         ]

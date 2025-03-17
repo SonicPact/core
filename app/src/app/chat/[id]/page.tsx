@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
-import { getChatById, sendMessage } from "../../actions/chat";
+import { getChatById, sendMessage } from "@/app/actions/chat";
 import { supabase } from "@/shared/utils/supabase";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { getCurrentUserProfile } from "../../actions/user";
+import { getCurrentUserProfile } from "@/app/actions/user";
 
 // Define interfaces for the component
 interface ChatParticipant {
@@ -82,7 +82,7 @@ export default function ChatPage() {
 
     // Subscribe to new messages
     const channel = supabase
-      .channel(`chat_${chatId}`)
+      .channel(`chat:${chatId}`)
       .on(
         "postgres_changes",
         {
@@ -92,65 +92,43 @@ export default function ChatPage() {
           filter: `chat_id=eq.${chatId}`,
         },
         async (payload) => {
-          console.log("Real-time message received:", payload);
+          // Get the sender details
+          const userData = await getCurrentUserProfile();
 
-          try {
-            // Get the sender details
-            const userData = await getCurrentUserProfile();
-            console.log("Current user for message processing:", userData?.id);
+          // Check if the message is from the current user
+          const isCurrentUser = payload.new.sender_id === userData?.id;
 
-            // Add the new message to the state
-            const newMessage = payload.new as Message;
-            console.log("Processing new message:", newMessage);
+          // If it's not from the current user, mark it as read
+          if (!isCurrentUser) {
+            // This will be handled by the getChatById call which marks messages as read
+          }
 
-            // Check if the message is from the current user
-            const isCurrentUser = newMessage.sender_id === userData?.id;
-            console.log("Is message from current user:", isCurrentUser);
+          // Add the new message to the state
+          const newMessage = payload.new as Message;
 
-            // Fetch the sender details
-            if (!isCurrentUser && chat) {
-              const otherParticipant = chat.participants.find(
-                (p) => p.user_id === newMessage.sender_id
-              );
+          // Fetch the sender details if not the current user
+          if (!isCurrentUser && chat) {
+            const otherParticipant = chat.participants.find(
+              (p) => p.user_id === newMessage.sender_id
+            );
 
-              if (otherParticipant) {
-                newMessage.sender = {
-                  name: otherParticipant.name,
-                  profile_image_url: otherParticipant.profile_image_url,
-                };
-              }
-            } else if (userData) {
+            if (otherParticipant) {
               newMessage.sender = {
-                name: userData.name || "You",
-                profile_image_url: userData.profile_image_url || null,
+                name: otherParticipant.name,
+                profile_image_url: otherParticipant.profile_image_url,
               };
             }
-
-            // Update messages with the new message
-            setMessages((prev) => {
-              // Check if this message is already in the state (prevent duplicates)
-              const exists = prev.some((m) => m.id === newMessage.id);
-              if (exists) {
-                console.log("Message already exists in state, skipping");
-                return prev;
-              }
-              console.log("Adding new message to state");
-              return [...prev, newMessage];
-            });
-          } catch (err) {
-            console.error("Error processing real-time message:", err);
+          } else if (userData) {
+            newMessage.sender = {
+              name: userData.name || "You",
+              profile_image_url: userData.profile_image_url || null,
+            };
           }
+
+          setMessages((prev) => [...prev, newMessage]);
         }
       )
-      .subscribe((status) => {
-        console.log(`Chat subscription status for chat ${chatId}:`, status);
-        if (status === "SUBSCRIBED") {
-          console.log(`Successfully subscribed to chat ${chatId}`);
-        } else if (status === "CHANNEL_ERROR") {
-          console.error(`Error subscribing to chat ${chatId}`);
-          setError("Failed to establish real-time connection");
-        }
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
