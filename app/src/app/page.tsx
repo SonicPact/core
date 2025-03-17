@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { checkUserExists } from "./actions/user";
+import { getCurrentUserProfile } from "./actions/user";
+import WalletAuthButton from "@/shared/components/WalletAuthButton";
+import { supabase } from "@/shared/utils/supabase";
 
 export default function Home() {
   const { connected, publicKey } = useWallet();
@@ -25,18 +26,36 @@ export default function Home() {
       if (connected && publicKey) {
         setUserStatus((prev) => ({ ...prev, isChecking: true }));
         try {
-          const { exists, userData } = await checkUserExists(
-            publicKey.toString()
-          );
-          setUserStatus({
-            isChecking: false,
-            exists,
-            userType: userData?.user_type as "studio" | "celebrity" | undefined,
-          });
+          // Check if the user is authenticated with Supabase
+          const { data: authData } = await supabase.auth.getSession();
 
-          // If user exists, redirect to dashboard
-          if (exists) {
-            router.push("/dashboard");
+          if (authData.session) {
+            // Get the user profile from our database
+            const userData = await getCurrentUserProfile();
+
+            if (userData) {
+              setUserStatus({
+                isChecking: false,
+                exists: true,
+                userType: userData.user_type as
+                  | "studio"
+                  | "celebrity"
+                  | undefined,
+              });
+
+              // Redirect to dashboard
+              router.push("/dashboard");
+            } else {
+              setUserStatus({
+                isChecking: false,
+                exists: false,
+              });
+            }
+          } else {
+            setUserStatus({
+              isChecking: false,
+              exists: false,
+            });
           }
         } catch (error) {
           console.error("Error checking user:", error);
@@ -47,6 +66,17 @@ export default function Home() {
 
     checkUser();
   }, [connected, publicKey, router]);
+
+  // Handle successful authentication
+  const handleAuthSuccess = (userData: any) => {
+    if (userData) {
+      setUserStatus({
+        isChecking: false,
+        exists: true,
+        userType: userData.user_type as "studio" | "celebrity" | undefined,
+      });
+    }
+  };
 
   return (
     <div>
@@ -114,7 +144,7 @@ export default function Home() {
               <p className="text-foreground/75">
                 Connect your wallet to get started
               </p>
-              <WalletMultiButton className="wallet-adapter-button-custom" />
+              <WalletAuthButton onAuthSuccess={handleAuthSuccess} />
             </div>
           )}
 

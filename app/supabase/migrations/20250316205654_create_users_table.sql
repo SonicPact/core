@@ -50,14 +50,3 @@ EXECUTE FUNCTION update_updated_at_column();
 -- Add RLS (Row Level Security) policies
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
--- Policy to allow users to read all profiles
-CREATE POLICY users_select_policy ON users
-  FOR SELECT USING (true);
-
--- Policy to allow users to update only their own profile
-CREATE POLICY users_update_policy ON users
-  FOR UPDATE USING (wallet_address = auth.jwt() ->> 'sub');
-
--- Policy to allow users to insert only their own profile
-CREATE POLICY users_insert_policy ON users
-  FOR INSERT WITH CHECK (wallet_address = auth.jwt() ->> 'sub');

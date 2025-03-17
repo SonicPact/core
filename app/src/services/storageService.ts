@@ -1,4 +1,4 @@
-import { supabase } from "@/shared/utils/supabase";
+import { createServerSupabaseClient } from "@/shared/utils/server-auth";
 import { v4 as uuidv4 } from "uuid";
 
 export const storageService = {
@@ -15,6 +15,8 @@ export const storageService = {
     folder: string = "images"
   ): Promise<string | null> {
     try {
+      const supabaseAdmin = await createServerSupabaseClient();
+
       // Convert File to ArrayBuffer
       const arrayBuffer = await file.arrayBuffer();
 
@@ -24,7 +26,7 @@ export const storageService = {
       const filePath = `${folder}/${fileName}`;
 
       // Upload the file to Supabase Storage using admin client
-      const { data, error } = await supabase.storage
+      const { data, error } = await supabaseAdmin.storage
         .from(bucket)
         .upload(filePath, arrayBuffer, {
           contentType: file.type,
@@ -39,7 +41,7 @@ export const storageService = {
       // Get the public URL for the file
       const {
         data: { publicUrl },
-      } = supabase.storage.from(bucket).getPublicUrl(filePath);
+      } = supabaseAdmin.storage.from(bucket).getPublicUrl(filePath);
 
       return publicUrl;
     } catch (error) {
@@ -82,7 +84,8 @@ export const storageService = {
     bucket: string = "profiles"
   ): Promise<boolean> {
     try {
-      const { error } = await supabase.storage.from(bucket).remove([path]);
+      const supabaseAdmin = await createServerSupabaseClient();
+      const { error } = await supabaseAdmin.storage.from(bucket).remove([path]);
 
       if (error) {
         console.error("Error deleting file:", error);

@@ -1,6 +1,7 @@
 "use server";
 
 import { storageService } from "@/services/storageService";
+import { getAuthenticatedWallet } from "./auth";
 
 /**
  * Upload a file to Supabase Storage
@@ -14,6 +15,13 @@ export async function uploadFile(
   bucket: string = "profiles",
   folder: string = "images"
 ): Promise<string | null> {
+  // Verify that the user is authenticated
+  const walletAddress = await getAuthenticatedWallet();
+
+  if (!walletAddress) {
+    throw new Error("Unauthorized: Authentication required");
+  }
+
   try {
     return await storageService.uploadFile(file, bucket, folder);
   } catch (error) {
@@ -34,6 +42,13 @@ export async function uploadFiles(
   bucket: string = "profiles",
   folder: string = "images"
 ): Promise<(string | null)[]> {
+  // Verify that the user is authenticated
+  const walletAddress = await getAuthenticatedWallet();
+
+  if (!walletAddress) {
+    throw new Error("Unauthorized: Authentication required");
+  }
+
   try {
     return await storageService.uploadFiles(files, bucket, folder);
   } catch (error) {
@@ -52,6 +67,13 @@ export async function deleteFile(
   path: string,
   bucket: string = "profiles"
 ): Promise<boolean> {
+  // Verify that the user is authenticated
+  const walletAddress = await getAuthenticatedWallet();
+
+  if (!walletAddress) {
+    throw new Error("Unauthorized: Authentication required");
+  }
+
   try {
     return await storageService.deleteFile(path, bucket);
   } catch (error) {

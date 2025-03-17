@@ -1,4 +1,4 @@
-import { supabase } from "@/shared/utils/supabase";
+import { createServerSupabaseClient } from "@/shared/utils/server-auth";
 import { Database } from "@/database.generated";
 
 export const userService = {
@@ -6,7 +6,8 @@ export const userService = {
    * Create a new user profile
    */
   async createUser(userData: Database["public"]["Tables"]["users"]["Insert"]) {
-    const { data, error } = await supabase
+    const supabaseAdmin = await createServerSupabaseClient();
+    const { data, error } = await supabaseAdmin
       .from("users")
       .insert(userData)
       .select();
@@ -22,7 +23,8 @@ export const userService = {
    * Get a user profile by wallet address
    */
   async getUserByWalletAddress(walletAddress: string) {
-    const { data, error } = await supabase
+    const supabaseAdmin = await createServerSupabaseClient();
+    const { data, error } = await supabaseAdmin
       .from("users")
       .select("*")
       .eq("wallet_address", walletAddress)
@@ -43,7 +45,8 @@ export const userService = {
     walletAddress: string,
     userData: Database["public"]["Tables"]["users"]["Update"]
   ) {
-    const { data, error } = await supabase
+    const supabaseAdmin = await createServerSupabaseClient();
+    const { data, error } = await supabaseAdmin
       .from("users")
       .update(userData)
       .eq("wallet_address", walletAddress)
@@ -60,7 +63,8 @@ export const userService = {
    * Get all celebrities
    */
   async getCelebrities() {
-    const { data, error } = await supabase
+    const supabaseAdmin = await createServerSupabaseClient();
+    const { data, error } = await supabaseAdmin
       .from("users")
       .select("*")
       .eq("user_type", "celebrity");
@@ -76,7 +80,8 @@ export const userService = {
    * Get all studios
    */
   async getStudios() {
-    const { data, error } = await supabase
+    const supabaseAdmin = await createServerSupabaseClient();
+    const { data, error } = await supabaseAdmin
       .from("users")
       .select("*")
       .eq("user_type", "studio");

@@ -1,6 +1,8 @@
 "use server";
 
 import { userService } from "@/services/userService";
+import { getAuthenticatedWallet } from "./auth";
+import { withAuth } from "@/shared/utils/server-auth";
 
 /**
  * Check if a user with the given wallet address exists
@@ -31,6 +33,13 @@ export async function createUser(userData: {
   category?: string;
   verification_document_url?: string;
 }) {
+  // Verify that the authenticated wallet matches the wallet being used to create the profile
+  const authenticatedWallet = await getAuthenticatedWallet();
+
+  if (!authenticatedWallet || authenticatedWallet !== userData.wallet_address) {
+    throw new Error("Unauthorized: Wallet address mismatch");
+  }
+
   try {
     const newUser = await userService.createUser(userData);
     return newUser;
@@ -50,6 +59,24 @@ export async function getUserByWalletAddress(walletAddress: string) {
   } catch (error) {
     console.error("Error in getUserByWalletAddress:", error);
     throw error;
+  }
+}
+
+/**
+ * Get the current user's profile
+ */
+export async function getCurrentUserProfile() {
+  const walletAddress = await getAuthenticatedWallet();
+
+  if (!walletAddress) {
+    return null;
+  }
+
+  try {
+    return await userService.getUserByWalletAddress(walletAddress);
+  } catch (error) {
+    console.error("Error in getCurrentUserProfile:", error);
+    return null;
   }
 }
 
@@ -95,6 +122,13 @@ export async function updateUser(
     category: string;
   }>
 ) {
+  // Verify that the authenticated wallet matches the wallet being updated
+  const authenticatedWallet = await getAuthenticatedWallet();
+
+  if (!authenticatedWallet || authenticatedWallet !== walletAddress) {
+    throw new Error("Unauthorized: Wallet address mismatch");
+  }
+
   try {
     const updatedUser = await userService.updateUser(walletAddress, userData);
     return updatedUser;

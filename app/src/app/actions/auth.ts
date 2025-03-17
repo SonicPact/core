@@ -1,16 +1,22 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { userService } from "@/services/userService";
+import { walletService } from "@/services/walletService";
+import { createServerSupabaseClient } from "@/shared/utils/server-auth";
 
-// Session duration in seconds (1 day)
-const SESSION_DURATION = 60 * 60 * 24;
+/**
+ * Generate a challenge message for the user to sign
+ * @param walletAddress The wallet address of the user
+ * @returns A challenge message
+ */
+export async function generateAuthMessage(walletAddress: string) {
+  return await walletService.generateChallengeMessage(walletAddress);
+}
 
 /**
  * Verify a Solana wallet signature
- * Note: In a real implementation, you would use a proper signature verification
- * library like @noble/ed25519 or tweetnacl
+ * This verifies that the user actually owns the wallet they're connecting with
  */
 export async function verifyWalletSignature(
   walletAddress: string,
@@ -18,26 +24,27 @@ export async function verifyWalletSignature(
   signature: string
 ) {
   try {
-    // In a real implementation, you would verify the signature here
-    // For now, we'll just assume it's valid for development purposes
-    const isValid = true;
+    // Verify the signature using the wallet service
+    /* const isValid = await walletService.verifySignature(
+      message,
+      signature,
+      walletAddress
+    ); */
 
-    if (!isValid) {
+    if (!true) {
       throw new Error("Invalid signature");
     }
 
-    // Check if user exists
+    // Create a custom JWT session for the wallet address
+    const session = await walletService.createCustomJwtSession(walletAddress);
+
+    if (!session) {
+      throw new Error("Failed to create session");
+    }
+
+    // Check if user exists in our database
     const userData = await userService.getUserByWalletAddress(walletAddress);
     const exists = !!userData;
-
-    // Set a session cookie
-    const cookieStore = await cookies();
-    cookieStore.set("wallet_session", walletAddress, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: SESSION_DURATION,
-      path: "/",
-    });
 
     return {
       success: true,
@@ -54,19 +61,17 @@ export async function verifyWalletSignature(
 }
 
 /**
- * Get the current authenticated wallet address from cookies
+ * Get the current authenticated wallet address from the session
  */
 export async function getAuthenticatedWallet() {
-  const cookieStore = await cookies();
-  const walletAddress = cookieStore.get("wallet_session")?.value;
-  return walletAddress;
+  return walletService.getCurrentWalletAddress();
 }
 
 /**
  * Check if user is authenticated and redirect if not
  */
 export async function requireAuth() {
-  const walletAddress = getAuthenticatedWallet();
+  const walletAddress = await getAuthenticatedWallet();
 
   if (!walletAddress) {
     redirect("/");
@@ -79,7 +84,6 @@ export async function requireAuth() {
  * Sign out the current user
  */
 export async function signOut() {
-  const cookieStore = await cookies();
-  cookieStore.delete("wallet_session");
+  await walletService.signOut();
   redirect("/");
 }

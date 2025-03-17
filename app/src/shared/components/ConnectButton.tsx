@@ -2,8 +2,8 @@
 
 import { FC } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useEffect, useState } from "react";
+import WalletAuthButton from "./WalletAuthButton";
 
 const ConnectButton: FC = () => {
   const { publicKey, connected } = useWallet();
@@ -21,9 +21,9 @@ const ConnectButton: FC = () => {
   }, [publicKey]);
 
   return (
-    <WalletMultiButton className="wallet-adapter-button-custom">
+    <WalletAuthButton>
       {connected && walletAddress ? walletAddress : "Connect Wallet"}
-    </WalletMultiButton>
+    </WalletAuthButton>
   );
 };
 
