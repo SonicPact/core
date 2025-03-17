@@ -7,6 +7,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useRouter } from "next/navigation";
 import { getCelebrities } from "../actions/user";
+import ChatButton from "../../shared/components/ChatButton";
 
 interface Celebrity {
   id: string;
@@ -325,13 +326,11 @@ export default function ExplorePage() {
                           View Profile
                         </Link>
 
-                        <Link
-                          href={`/chat/new?recipient=${celebrity.id}`}
-                          className="flex items-center text-sm bg-primary/10 text-primary px-3 py-1 rounded-lg hover:bg-primary/20 transition-colors"
-                        >
-                          <Icon name="message-circle" className="mr-1" />
-                          Chat
-                        </Link>
+                        <ChatButton
+                          recipientWalletAddress={celebrity.wallet_address}
+                          recipientName={celebrity.name}
+                          className="flex items-center text-sm"
+                        />
                       </div>
                     </div>
                   </div>

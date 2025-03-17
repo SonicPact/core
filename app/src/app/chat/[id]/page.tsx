@@ -1,325 +1,311 @@
 "use client";
 
-import { useState, useEffect, useRef, FormEvent } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
-import Link from "next/link";
-import Icon from "@/shared/components/Icon";
+import { getChatById, sendMessage } from "../../actions/chat";
+import { supabase } from "@/shared/utils/supabase";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { getCurrentUserProfile } from "../../actions/user";
+
+// Define interfaces for the component
+interface ChatParticipant {
+  id: string;
+  user_id: string;
+  name: string;
+  profile_image_url?: string | null;
+}
 
 interface Message {
   id: string;
-  senderId: string;
-  text: string;
-  timestamp: string;
-  isRead: boolean;
+  chat_id: string;
+  sender_id: string;
+  content: string;
+  is_read: boolean | null;
+  created_at: string | null;
+  sender?: {
+    name: string;
+    profile_image_url?: string | null;
+  };
 }
 
-interface ChatParticipant {
+interface ChatData {
   id: string;
-  name: string;
-  profileImage: string;
-  type: "studio" | "celebrity";
+  created_at: string | null;
+  updated_at: string | null;
+  participants: ChatParticipant[];
 }
 
 export default function ChatPage() {
-  const params = useParams();
-  const chatId = params.id as string;
-
+  const { id: chatId } = useParams();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [chat, setChat] = useState<ChatData | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<ChatParticipant | null>(null);
-  const [recipient, setRecipient] = useState<ChatParticipant | null>(null);
-
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch chat data
+  // Fetch chat data and subscribe to real-time updates
   useEffect(() => {
+    if (!chatId) return;
+
     const fetchChatData = async () => {
-      setIsLoading(true);
+      try {
+        setLoading(true);
+        setError(null);
 
-      // Mock data for now
-      // In a real implementation, this would fetch from the blockchain
+        // Get current user
+        const userData = await getCurrentUserProfile();
+        setCurrentUser(userData);
 
-      // Mock current user (would come from wallet/blockchain)
-      const mockCurrentUser: ChatParticipant = {
-        id: "studio1",
-        name: "GameStudio XYZ",
-        profileImage: "https://randomuser.me/api/portraits/men/20.jpg",
-        type: "studio",
-      };
+        // Get chat data
+        const result = await getChatById(chatId as string);
+        if (!result.success) {
+          setError(result.error || "Failed to load chat");
+          return;
+        }
 
-      // Mock recipient based on chat ID
-      const mockRecipient: ChatParticipant = {
-        id: "2",
-        name: "Jane Smith",
-        profileImage: "https://randomuser.me/api/portraits/women/2.jpg",
-        type: "celebrity",
-      };
-
-      // Mock messages
-      const mockMessages: Message[] = [
-        {
-          id: "1",
-          senderId: "studio1",
-          text: "Hi Jane, we're interested in collaborating with you for our upcoming game.",
-          timestamp: "2023-05-15T10:30:00Z",
-          isRead: true,
-        },
-        {
-          id: "2",
-          senderId: "2",
-          text: "Hello! I'd be interested to hear more about your project.",
-          timestamp: "2023-05-15T10:35:00Z",
-          isRead: true,
-        },
-        {
-          id: "3",
-          senderId: "studio1",
-          text: "Great! We're developing an RPG game and would like to feature your likeness as an in-game character NFT.",
-          timestamp: "2023-05-15T10:40:00Z",
-          isRead: true,
-        },
-        {
-          id: "4",
-          senderId: "2",
-          text: "That sounds interesting. What kind of terms are you thinking?",
-          timestamp: "2023-05-15T10:45:00Z",
-          isRead: true,
-        },
-        {
-          id: "5",
-          senderId: "studio1",
-          text: "We're thinking of a flat fee plus royalties on sales of your character NFT. Would you be open to that?",
-          timestamp: "2023-05-15T10:50:00Z",
-          isRead: true,
-        },
-        {
-          id: "6",
-          senderId: "2",
-          text: "Yes, that sounds reasonable. What percentage of royalties are you offering?",
-          timestamp: "2023-05-15T11:00:00Z",
-          isRead: false,
-        },
-      ];
-
-      setCurrentUser(mockCurrentUser);
-      setRecipient(mockRecipient);
-      setMessages(mockMessages);
-      setIsLoading(false);
+        // Type guard to check if result has chat and messages properties
+        if ("chat" in result && "messages" in result) {
+          setChat(result.chat as ChatData);
+          setMessages(result.messages as Message[]);
+        }
+      } catch (err) {
+        setError((err as Error).message || "An error occurred");
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchChatData();
+
+    // Subscribe to new messages
+    const channel = supabase
+      .channel(`chat_${chatId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `chat_id=eq.${chatId}`,
+        },
+        async (payload) => {
+          console.log("Real-time message received:", payload);
+
+          try {
+            // Get the sender details
+            const userData = await getCurrentUserProfile();
+            console.log("Current user for message processing:", userData?.id);
+
+            // Add the new message to the state
+            const newMessage = payload.new as Message;
+            console.log("Processing new message:", newMessage);
+
+            // Check if the message is from the current user
+            const isCurrentUser = newMessage.sender_id === userData?.id;
+            console.log("Is message from current user:", isCurrentUser);
+
+            // Fetch the sender details
+            if (!isCurrentUser && chat) {
+              const otherParticipant = chat.participants.find(
+                (p) => p.user_id === newMessage.sender_id
+              );
+
+              if (otherParticipant) {
+                newMessage.sender = {
+                  name: otherParticipant.name,
+                  profile_image_url: otherParticipant.profile_image_url,
+                };
+              }
+            } else if (userData) {
+              newMessage.sender = {
+                name: userData.name || "You",
+                profile_image_url: userData.profile_image_url || null,
+              };
+            }
+
+            // Update messages with the new message
+            setMessages((prev) => {
+              // Check if this message is already in the state (prevent duplicates)
+              const exists = prev.some((m) => m.id === newMessage.id);
+              if (exists) {
+                console.log("Message already exists in state, skipping");
+                return prev;
+              }
+              console.log("Adding new message to state");
+              return [...prev, newMessage];
+            });
+          } catch (err) {
+            console.error("Error processing real-time message:", err);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log(`Chat subscription status for chat ${chatId}:`, status);
+        if (status === "SUBSCRIBED") {
+          console.log(`Successfully subscribed to chat ${chatId}`);
+        } else if (status === "CHANNEL_ERROR") {
+          console.error(`Error subscribing to chat ${chatId}`);
+          setError("Failed to establish real-time connection");
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [chatId]);
 
-  // Scroll to bottom of messages
+  // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSendMessage = (e: FormEvent) => {
+  // Handle sending a new message
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newMessage.trim() || !chatId || sending) return;
 
-    if (!newMessage.trim() || !currentUser) return;
-
-    // Create new message
-    const newMsg: Message = {
-      id: `msg-${Date.now()}`,
-      senderId: currentUser.id,
-      text: newMessage,
-      timestamp: new Date().toISOString(),
-      isRead: false,
-    };
-
-    // Add to messages
-    setMessages([...messages, newMsg]);
-    setNewMessage("");
-
-    // In a real implementation, this would send the message to the blockchain
-  };
-
-  const formatTime = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const formatDate = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-  // Group messages by date
-  const groupedMessages: { [date: string]: Message[] } = {};
-  messages.forEach((message) => {
-    const date = formatDate(message.timestamp);
-    if (!groupedMessages[date]) {
-      groupedMessages[date] = [];
+    try {
+      setSending(true);
+      const result = await sendMessage(chatId as string, newMessage);
+      if (!result.success) {
+        setError(result.error || "Failed to send message");
+        return;
+      }
+      setNewMessage("");
+    } catch (err) {
+      setError((err as Error).message || "An error occurred");
+    } finally {
+      setSending(false);
     }
-    groupedMessages[date].push(message);
-  });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <p>Error: {error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!chat) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
+          <p>Chat not found</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Find the other participant (for a 1:1 chat)
+  const otherParticipant = chat.participants.find(
+    (p) => p.user_id !== currentUser?.id
+  );
 
   return (
-    <div className="min-h-screen pt-20 p-page">
-      <div className="max-w-5xl mx-auto">
-        <div className="bg-background border border-secondary/20 rounded-lg shadow-lg overflow-hidden h-[calc(100vh-120px)] flex flex-col">
-          {/* Chat header */}
-          <div className="p-4 border-b border-secondary/20 flex items-center">
-            <Link href="/dashboard" className="mr-4">
-              <Icon name="arrow-left" className="text-foreground/70" />
-            </Link>
+    <div className="flex flex-col h-screen max-h-screen">
+      {/* Chat header */}
+      <div className="bg-background border-b border-border p-4 flex items-center">
+        {otherParticipant?.profile_image_url ? (
+          <img
+            src={otherParticipant.profile_image_url}
+            alt={otherParticipant.name}
+            className="w-10 h-10 rounded-full mr-3"
+          />
+        ) : (
+          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mr-3">
+            <span className="text-primary font-medium">
+              {otherParticipant?.name?.charAt(0) || "?"}
+            </span>
+          </div>
+        )}
+        <div>
+          <h2 className="text-lg font-semibold">
+            {otherParticipant?.name || "Chat"}
+          </h2>
+        </div>
+      </div>
 
-            {isLoading ? (
-              <div className="animate-pulse h-10 w-40 bg-secondary/10 rounded-lg"></div>
-            ) : recipient ? (
-              <div className="flex items-center">
-                <img
-                  src={recipient.profileImage}
-                  alt={recipient.name}
-                  className="w-10 h-10 rounded-full object-cover mr-3"
-                />
-                <div>
-                  <h2 className="font-bold">{recipient.name}</h2>
-                  <p className="text-xs text-foreground/50 capitalize">
-                    {recipient.type}
+      {/* Messages container */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.length === 0 ? (
+          <div className="flex justify-center items-center h-full">
+            <p className="text-foreground/50">
+              No messages yet. Start the conversation!
+            </p>
+          </div>
+        ) : (
+          messages.map((message) => {
+            const isCurrentUser = message.sender_id === currentUser?.id;
+            return (
+              <div
+                key={message.id}
+                className={`flex ${
+                  isCurrentUser ? "justify-end" : "justify-start"
+                }`}
+              >
+                <div
+                  className={`max-w-[70%] rounded-lg p-3 ${
+                    isCurrentUser
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted"
+                  }`}
+                >
+                  <p>{message.content}</p>
+                  <p className="text-xs mt-1 opacity-70">
+                    {new Date(message.created_at || "").toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </p>
                 </div>
               </div>
-            ) : null}
-
-            <div className="ml-auto flex gap-2">
-              {!isLoading && currentUser?.type === "studio" && (
-                <Link
-                  href={`/deals/create?celebrity=${recipient?.id}`}
-                  className="flex items-center text-sm bg-primary/10 text-primary px-3 py-1 rounded-lg hover:bg-primary/20 transition-colors"
-                >
-                  <Icon name="file-text" className="mr-1" />
-                  Create Deal
-                </Link>
-              )}
-            </div>
-          </div>
-
-          {/* Chat messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-6">
-            {isLoading ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-start gap-2">
-                    <div className="animate-pulse h-8 w-8 bg-secondary/10 rounded-full"></div>
-                    <div className="animate-pulse h-16 w-3/4 bg-secondary/10 rounded-lg"></div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              Object.entries(groupedMessages).map(([date, dateMessages]) => (
-                <div key={date} className="space-y-4">
-                  <div className="flex justify-center">
-                    <span className="text-xs bg-secondary/10 text-secondary px-2 py-1 rounded-full">
-                      {date}
-                    </span>
-                  </div>
-
-                  {dateMessages.map((message) => {
-                    const isCurrentUser = message.senderId === currentUser?.id;
-                    return (
-                      <div
-                        key={message.id}
-                        className={`flex ${
-                          isCurrentUser ? "justify-end" : "justify-start"
-                        }`}
-                      >
-                        <div
-                          className={`flex items-start max-w-[75%] ${
-                            isCurrentUser ? "flex-row-reverse" : ""
-                          }`}
-                        >
-                          {!isCurrentUser && (
-                            <img
-                              src={recipient?.profileImage}
-                              alt={recipient?.name}
-                              className="w-8 h-8 rounded-full object-cover mx-2 mt-1"
-                            />
-                          )}
-
-                          <div
-                            className={`px-4 py-2 rounded-lg ${
-                              isCurrentUser
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-secondary/10 text-foreground"
-                            }`}
-                          >
-                            <p>{message.text}</p>
-                            <div
-                              className={`text-xs mt-1 ${
-                                isCurrentUser
-                                  ? "text-primary-foreground/70"
-                                  : "text-foreground/50"
-                              } text-right`}
-                            >
-                              {formatTime(message.timestamp)}
-                              {isCurrentUser && (
-                                <span className="ml-1">
-                                  {message.isRead ? (
-                                    <Icon
-                                      name="check-check"
-                                      className="inline-block w-3 h-3"
-                                    />
-                                  ) : (
-                                    <Icon
-                                      name="check"
-                                      className="inline-block w-3 h-3"
-                                    />
-                                  )}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          {isCurrentUser && (
-                            <img
-                              src={currentUser?.profileImage}
-                              alt={currentUser?.name}
-                              className="w-8 h-8 rounded-full object-cover mx-2 mt-1"
-                            />
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Message input */}
-          <div className="p-4 border-t border-secondary/20">
-            <form onSubmit={handleSendMessage} className="flex gap-2">
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Type a message..."
-                className="flex-1 p-2 border border-secondary/20 rounded-lg bg-secondary/10"
-                disabled={isLoading}
-              />
-              <button
-                type="submit"
-                className="bg-primary text-primary-foreground p-2 rounded-lg disabled:opacity-50"
-                disabled={isLoading || !newMessage.trim()}
-              >
-                <Icon name="send" />
-              </button>
-            </form>
-          </div>
-        </div>
+            );
+          })
+        )}
+        <div ref={messagesEndRef} />
       </div>
+
+      {/* Message input */}
+      <form
+        onSubmit={handleSendMessage}
+        className="border-t border-border p-4 bg-background"
+      >
+        <div className="flex items-center">
+          <input
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Type a message..."
+            className="flex-1 border border-border rounded-l-lg p-2 focus:outline-none focus:ring-1 focus:ring-primary"
+            disabled={sending}
+          />
+          <button
+            type="submit"
+            className="bg-primary text-primary-foreground rounded-r-lg p-2 px-4 disabled:opacity-50"
+            disabled={!newMessage.trim() || sending}
+          >
+            {sending ? (
+              <span className="inline-block w-5 h-5 border-t-2 border-primary-foreground rounded-full animate-spin"></span>
+            ) : (
+              "Send"
+            )}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

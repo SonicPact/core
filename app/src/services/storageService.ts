@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from "@/shared/utils/server-auth";
+import { createAdminClient } from "@/shared/utils/server-supabase";
 import { v4 as uuidv4 } from "uuid";
 
 export const storageService = {
@@ -15,7 +15,7 @@ export const storageService = {
     folder: string = "images"
   ): Promise<string | null> {
     try {
-      const supabaseAdmin = await createServerSupabaseClient();
+      const supabaseAdmin = await createAdminClient();
 
       // Convert File to ArrayBuffer
       const arrayBuffer = await file.arrayBuffer();
@@ -84,7 +84,7 @@ export const storageService = {
     bucket: string = "profiles"
   ): Promise<boolean> {
     try {
-      const supabaseAdmin = await createServerSupabaseClient();
+      const supabaseAdmin = await createAdminClient();
       const { error } = await supabaseAdmin.storage.from(bucket).remove([path]);
 
       if (error) {

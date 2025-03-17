@@ -7,6 +7,10 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useRouter } from "next/navigation";
 import { getUserByWalletAddress } from "../actions/user";
+import { getDashboardChats } from "../actions/chat";
+import { supabase } from "@/shared/utils/supabase";
+import ChatRequestsList from "@/shared/components/ChatRequestsList";
+import { Chat } from "@/services/chatService";
 
 interface Deal {
   id: string;
@@ -35,11 +39,39 @@ interface Message {
   timestamp: string;
 }
 
+interface ChatData {
+  id: string;
+  created_at: string | null;
+  updated_at: string | null;
+  participants: {
+    id: string;
+    user_id: string;
+    name: string;
+    profile_image_url?: string | null;
+  }[];
+  last_message?: {
+    id: string;
+    chat_id: string;
+    sender_id: string;
+    content: string;
+    is_read: boolean | null;
+    created_at: string | null;
+  } | null;
+}
+
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("deals");
   const [deals, setDeals] = useState<Deal[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [chats, setChats] = useState<any[]>([]);
+  const [chatRequests, setChatRequests] = useState<{
+    sent: any[];
+    received: any[];
+  }>({
+    sent: [],
+    received: [],
+  });
   const [isLoading, setIsLoading] = useState(true);
+  const [chatError, setChatError] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<any>(null);
   const { connected, publicKey } = useWallet();
   const router = useRouter();
@@ -80,16 +112,31 @@ export default function Dashboard() {
     fetchUserProfile();
   }, [publicKey, router]);
 
-  // Fetch deals and messages
+  // Fetch chats, chat requests, and deals
   useEffect(() => {
     const fetchData = async () => {
       if (!publicKey || !userProfile) return;
 
       setIsLoading(true);
+      setChatError(null);
 
       try {
-        // In a real implementation, this would fetch from the blockchain/database
-        // Mock data for now
+        // Fetch chat data
+        const chatResult = await getDashboardChats();
+        if (chatResult.success) {
+          // Filter out any null values
+          const validChats = (chatResult.chats || []).filter(
+            (chat) => chat !== null
+          );
+          setChats(validChats);
+          setChatRequests(
+            chatResult.chatRequests || { sent: [], received: [] }
+          );
+        } else {
+          setChatError(chatResult.error || "Failed to load chat data");
+        }
+
+        // Fetch deals (using mock data for now)
         const mockDeals: Deal[] = [
           {
             id: "1",
@@ -135,55 +182,43 @@ export default function Dashboard() {
           },
         ];
 
-        const mockMessages: Message[] = [
-          {
-            id: "1",
-            sender: {
-              id: "studio1",
-              name: "GameStudio XYZ",
-              profileImage: "https://randomuser.me/api/portraits/men/20.jpg",
-            },
-            preview:
-              "Hi, we're interested in collaborating with you for our upcoming game...",
-            unread: true,
-            timestamp: "2023-05-15T10:30:00Z",
-          },
-          {
-            id: "2",
-            sender: {
-              id: "celeb2",
-              name: "Jane Smith",
-              profileImage: "https://randomuser.me/api/portraits/women/2.jpg",
-            },
-            preview:
-              "Thanks for your proposal. I have a few questions about the terms...",
-            unread: false,
-            timestamp: "2023-05-14T15:45:00Z",
-          },
-          {
-            id: "3",
-            sender: {
-              id: "studio3",
-              name: "Indie Games Inc",
-              profileImage: "https://randomuser.me/api/portraits/men/30.jpg",
-            },
-            preview:
-              "The collaboration was a success! We'd like to discuss a follow-up project...",
-            unread: false,
-            timestamp: "2023-05-12T11:20:00Z",
-          },
-        ];
-
         setDeals(mockDeals);
-        setMessages(mockMessages);
       } catch (error) {
         console.error("Error fetching data:", error);
+        setChatError((error as Error).message || "An error occurred");
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchData();
+
+    // Set up real-time subscriptions for chat updates
+    const chatChannel = supabase
+      .channel("chat_updates")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "messages",
+        },
+        () => fetchData()
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "chat_requests",
+        },
+        () => fetchData()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(chatChannel);
+    };
   }, [publicKey, userProfile]);
 
   const formatDate = (dateString: string) => {
@@ -307,13 +342,42 @@ export default function Dashboard() {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Messages</h2>
         <Link
-          href="/chat/new"
+          href="/chat"
           className="flex items-center bg-primary text-primary-foreground px-4 py-2 rounded-lg"
         >
           <Icon name="message-square-plus" className="mr-2" />
-          New Message
+          View All Chats
         </Link>
       </div>
+
+      {chatError && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <p>Error: {chatError}</p>
+        </div>
+      )}
+
+      {/* Chat Requests Section */}
+      {!isLoading && (
+        <ChatRequestsList
+          requests={chatRequests}
+          onStatusChange={() =>
+            getDashboardChats().then((result) => {
+              if (result.success) {
+                const validChats = (result.chats || []).filter(
+                  (chat) => chat !== null
+                );
+                setChats(validChats);
+                setChatRequests(
+                  result.chatRequests || { sent: [], received: [] }
+                );
+              }
+            })
+          }
+        />
+      )}
+
+      {/* Chats Section */}
+      <h3 className="text-xl font-semibold mb-4">Your Conversations</h3>
 
       {isLoading ? (
         <div className="space-y-4">
@@ -324,65 +388,96 @@ export default function Dashboard() {
             ></div>
           ))}
         </div>
-      ) : messages.length === 0 ? (
+      ) : chats.length === 0 ? (
         <div className="text-center py-16 bg-secondary/5 rounded-lg">
           <Icon
             name="message-square-x"
             className="mx-auto text-4xl text-foreground/30 mb-4"
           />
-          <h3 className="text-xl font-medium mb-2">No messages yet</h3>
+          <h3 className="text-xl font-medium mb-2">No conversations yet</h3>
           <p className="text-foreground/50 mb-4">
-            Start a conversation with a celebrity or studio.
+            Start by accepting chat requests or messaging users from the explore
+            page.
           </p>
           <Link
-            href="/chat/new"
+            href="/explore"
             className="inline-flex items-center bg-primary text-primary-foreground px-4 py-2 rounded-lg"
           >
-            <Icon name="message-square-plus" className="mr-2" />
-            New Message
+            <Icon name="users" className="mr-2" />
+            Explore Users
           </Link>
         </div>
       ) : (
         <div className="space-y-2">
-          {messages.map((message) => (
-            <Link
-              href={`/chat/${message.id}`}
-              key={message.id}
-              className={`block p-4 rounded-lg transition-colors ${
-                message.unread
-                  ? "bg-primary/5 border border-primary/20"
-                  : "bg-background border border-secondary/20 hover:border-primary/50"
-              }`}
-            >
-              <div className="flex items-center">
-                <img
-                  src={message.sender.profileImage}
-                  alt={message.sender.name}
-                  className="w-10 h-10 rounded-full object-cover mr-3"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-center">
-                    <h3 className="font-bold truncate">
-                      {message.sender.name}
-                    </h3>
-                    <span className="text-xs text-foreground/50">
-                      {formatDate(message.timestamp)}
-                    </span>
+          {chats.map((chat) => {
+            // Find the other participant (for a 1:1 chat)
+            const otherParticipant = chat.participants.find(
+              (p: { user_id: string }) => p.user_id !== userProfile?.id
+            );
+
+            // Get the last message if available
+            const lastMessage = chat.last_message;
+
+            return (
+              <Link
+                href={`/chat/${chat.id}`}
+                key={chat.id}
+                className={`block p-4 rounded-lg transition-colors ${
+                  lastMessage &&
+                  !lastMessage.is_read &&
+                  lastMessage.sender_id !== userProfile?.id
+                    ? "bg-primary/5 border border-primary/20"
+                    : "bg-background border border-secondary/20 hover:border-primary/50"
+                }`}
+              >
+                <div className="flex items-center">
+                  {otherParticipant?.profile_image_url ? (
+                    <img
+                      src={otherParticipant.profile_image_url}
+                      alt={otherParticipant.name}
+                      className="w-10 h-10 rounded-full object-cover mr-3"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mr-3">
+                      <span className="text-primary font-medium">
+                        {otherParticipant?.name?.charAt(0) || "?"}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center">
+                      <h3 className="font-bold truncate">
+                        {otherParticipant?.name || "Unknown User"}
+                      </h3>
+                      <span className="text-xs text-foreground/50">
+                        {lastMessage?.created_at
+                          ? formatDate(lastMessage.created_at)
+                          : chat.created_at
+                          ? formatDate(chat.created_at)
+                          : ""}
+                      </span>
+                    </div>
+                    <p
+                      className={`text-sm truncate ${
+                        lastMessage &&
+                        !lastMessage.is_read &&
+                        lastMessage.sender_id !== userProfile?.id
+                          ? "font-medium"
+                          : "text-foreground/70"
+                      }`}
+                    >
+                      {lastMessage ? lastMessage.content : "No messages yet"}
+                    </p>
                   </div>
-                  <p
-                    className={`text-sm truncate ${
-                      message.unread ? "font-medium" : "text-foreground/70"
-                    }`}
-                  >
-                    {message.preview}
-                  </p>
+                  {lastMessage &&
+                    !lastMessage.is_read &&
+                    lastMessage.sender_id !== userProfile?.id && (
+                      <div className="ml-2 w-3 h-3 rounded-full bg-primary"></div>
+                    )}
                 </div>
-                {message.unread && (
-                  <div className="ml-2 w-3 h-3 rounded-full bg-primary"></div>
-                )}
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
