@@ -15,11 +15,8 @@ sonicpact = "GrujK4NkA76V7BvkS66t1gAPXJKJgmF6dXoRGiq7CeoM"
 [programs.mainnet]
 sonicpact = "GrujK4NkA76V7BvkS66t1gAPXJKJgmF6dXoRGiq7CeoM"
 
-[registry]
-url = "https://api.apr.dev"
-
 [provider]
-cluster = "localnet"
+cluster = "https://api.testnet.sonic.game"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
