@@ -1,4 +1,8 @@
 use anchor_lang::prelude::*;
+use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::metadata::{create_metadata_accounts_v3, CreateMetadataAccountsV3};
+use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount};
+use mpl_token_metadata::types::{Creator, DataV2};
 
 declare_id!("GrujK4NkA76V7BvkS66t1gAPXJKJgmF6dXoRGiq7CeoM");
 
@@ -155,6 +159,85 @@ pub mod sonicpact {
             platform_fee_amount,
         )?;
 
+        // Mint the commemoration NFT
+        // Get the mint authority PDA signing seeds
+        let deal_key = deal.key();
+        let mint_auth_seeds = &[
+            b"mint_authority",
+            deal_key.as_ref(),
+            &[ctx.bumps.nft_mint_authority],
+        ];
+        let mint_auth_signer = &[&mint_auth_seeds[..]];
+
+        // Mint one token to the studio
+        token::mint_to(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                MintTo {
+                    mint: ctx.accounts.nft_mint.to_account_info(),
+                    to: ctx.accounts.studio_token_account.to_account_info(),
+                    authority: ctx.accounts.nft_mint_authority.to_account_info(),
+                },
+                mint_auth_signer,
+            ),
+            1, // Mint exactly 1 token (NFT standard)
+        )?;
+
+        // Create NFT metadata
+        let studio_creator = Creator {
+            address: ctx.accounts.studio.key(),
+            verified: false, // Would need separate verification tx
+            share: 50,       // 50% attribution
+        };
+
+        let celebrity_creator = Creator {
+            address: ctx.accounts.celebrity.key(),
+            verified: false, // Would need separate verification tx
+            share: 50,       // 50% attribution
+        };
+
+        let creators = vec![studio_creator, celebrity_creator];
+
+        // Format metadata
+        let metadata_title = format!("SonicPact: {}", deal.name);
+        let metadata_symbol = "SONIC".to_string();
+        let metadata_uri = format!(
+            "https://sonicpact.io/metadata/{}.json",
+            deal.key().to_string()
+        );
+
+        let data_v2 = DataV2 {
+            name: metadata_title,
+            symbol: metadata_symbol,
+            uri: metadata_uri,
+            seller_fee_basis_points: 500, // 5% royalty
+            creators: Some(creators),
+            collection: None,
+            uses: None,
+        };
+
+        // Create metadata account
+        create_metadata_accounts_v3(
+            CpiContext::new_with_signer(
+                ctx.accounts.metadata_program.to_account_info(),
+                CreateMetadataAccountsV3 {
+                    metadata: ctx.accounts.nft_metadata.to_account_info(),
+                    mint: ctx.accounts.nft_mint.to_account_info(),
+                    mint_authority: ctx.accounts.nft_mint_authority.to_account_info(),
+                    payer: ctx.accounts.signer.to_account_info(),
+                    update_authority: ctx.accounts.nft_mint_authority.to_account_info(),
+                    system_program: ctx.accounts.system_program.to_account_info(),
+                    rent: ctx.accounts.rent.to_account_info(),
+                },
+                mint_auth_signer,
+            ),
+            data_v2,
+            true, // is_mutable
+            true, // update_authority_is_signer
+            None, // collection_details
+        )?;
+
+        msg!("NFT minted for deal: {}", deal.name);
         deal.status = DealStatus::Completed;
         deal.updated_at = Clock::get()?.unix_timestamp;
 
@@ -333,7 +416,41 @@ pub struct CompleteDeal<'info> {
     /// CHECK: This is the platform authority
     pub platform_authority: UncheckedAccount<'info>,
 
+    // NFT-related accounts
+    /// NFT mint account
+    #[account(mut)]
+    pub nft_mint: Account<'info, Mint>,
+
+    /// NFT mint authority (PDA)
+    #[account(
+        seeds = [b"mint_authority", deal.key().as_ref()],
+        bump,
+    )]
+    /// CHECK: This is a PDA that will be the mint authority
+    pub nft_mint_authority: UncheckedAccount<'info>,
+
+    /// Studio token account to receive the NFT
+    #[account(mut)]
+    pub studio_token_account: Account<'info, TokenAccount>,
+
+    /// NFT metadata account
+    /// CHECK: This account will be initialized by the metadata program
+    #[account(mut)]
+    pub nft_metadata: UncheckedAccount<'info>,
+
+    /// SPL token program
+    pub token_program: Program<'info, Token>,
+
+    /// Metadata program
+    /// CHECK: This is the Metaplex metadata program
+    pub metadata_program: UncheckedAccount<'info>,
+
+    /// Associated token program
+    pub associated_token_program: Program<'info, AssociatedToken>,
+
     pub system_program: Program<'info, System>,
+
+    pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
